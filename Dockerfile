@@ -23,7 +23,7 @@ RUN python src/read_data.py && \
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8081
 
-# Expose default port
+# Expose port
 EXPOSE ${PORT}
 
 # Run the model service
