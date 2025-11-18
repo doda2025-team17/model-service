@@ -7,7 +7,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# Copy source code
+# Copy source code and smsspamcollection
 COPY src/ ./src/
 COPY smsspamcollection/ ./smsspamcollection/
 
