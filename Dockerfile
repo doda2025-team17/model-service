@@ -19,12 +19,12 @@ RUN python src/read_data.py && \
     python src/text_preprocessing.py && \
     python src/text_classification.py
 
-# Expose default port
-EXPOSE 8081
-
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8081
+
+# Expose default port
+EXPOSE ${PORT}
 
 # Run the model service
 ENTRYPOINT ["python"]
