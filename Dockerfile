@@ -1,0 +1,30 @@
+FROM python:3.12.9-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy source code
+COPY src/ ./src/
+COPY smsspamcollection/ ./smsspamcollection/
+
+# Create output directory
+RUN mkdir -p output
+
+# Train the model during build
+RUN python src/read_data.py && \
+    python src/text_preprocessing.py && \
+    python src/text_classification.py
+
+# Expose port 8081
+EXPOSE 8081
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Run the model service
+ENTRYPOINT ["python"]
+CMD ["src/serve_model.py"]
