@@ -21,10 +21,10 @@ RUN python src/read_data.py && \
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8081
+ENV SERVER_PORT=8081
 
 # Expose port
-EXPOSE ${PORT}
+EXPOSE ${SERVER_PORT}
 
 # Run the model service
 ENTRYPOINT ["python"]
