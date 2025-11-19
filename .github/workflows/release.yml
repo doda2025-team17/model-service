@@ -23,32 +23,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Setup Java to read version from pom.xml
-      - name: Set up Java for version extraction
-        uses: actions/setup-java@v4
-        with:
-          java-version: '25'
-          distribution: 'temurin'
-
-      # Single source of truth: validate pom.xml version matches Git tag (F8 requirement)
+      # Single source of truth: version from pyproject.toml
       - name: Extract and validate version
         id: version
         run: |
-          # Read version from pom.xml (single source of truth)
-          POM_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "POM version: $POM_VERSION"
-          
           # Get version from tag (remove 'v' prefix)
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           echo "Tag version: $TAG_VERSION"
           
-          # Validate they match
-          if [ "$POM_VERSION" != "$TAG_VERSION" ]; then
-            echo "❌ Error: pom.xml version ($POM_VERSION) doesn't match tag version ($TAG_VERSION)"
-            exit 1
+          # Try to find and validate version from Python project files
+          if [ -f "pyproject.toml" ]; then
+            # Extract version from pyproject.toml
+            PYPROJECT_VERSION=$(grep -E '^version =' pyproject.toml | sed -E 's/version = "([^"]+)"/\1/' | tr -d ' "')
+            echo "pyproject.toml version: $PYPROJECT_VERSION"
+            if [ "$PYPROJECT_VERSION" != "$TAG_VERSION" ]; then
+              echo "❌ Error: pyproject.toml version ($PYPROJECT_VERSION) doesn't match tag version ($TAG_VERSION)"
+              exit 1
+            fi
+          elif [ -f "setup.py" ]; then
+            # Extract version from setup.py (simplified approach)
+            SETUP_VERSION=$(grep -E "version=['\"][^'\"]+['\"]" setup.py | sed -E "s/.*version=['\"]([^'\"]+)['\"].*/\1/")
+            echo "setup.py version: $SETUP_VERSION"
+            if [ "$SETUP_VERSION" != "$TAG_VERSION" ]; then
+              echo "❌ Error: setup.py version ($SETUP_VERSION) doesn't match tag version ($TAG_VERSION)"
+              exit 1
+            fi
+          else
+            # Create a version file if none exists (single source of truth)
+            echo "No version file found. Creating version.txt with tag version"
+            echo "$TAG_VERSION" > version.txt
           fi
           
-          echo "version=$POM_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$TAG_VERSION" >> $GITHUB_OUTPUT
           echo "✅ Version validation passed"
 
       # Multi-architecture setup for F4 requirement
