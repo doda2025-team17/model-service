@@ -37,7 +37,7 @@ jobs:
             PYPROJECT_VERSION=$(grep -E '^version =' pyproject.toml | sed -E 's/version = "([^"]+)"/\1/' | tr -d ' "')
             echo "pyproject.toml version: $PYPROJECT_VERSION"
             if [ "$PYPROJECT_VERSION" != "$TAG_VERSION" ]; then
-              echo "❌ Error: pyproject.toml version ($PYPROJECT_VERSION) doesn't match tag version ($TAG_VERSION)"
+              echo "Error: pyproject.toml version ($PYPROJECT_VERSION) doesn't match tag version ($TAG_VERSION)"
               exit 1
             fi
           elif [ -f "setup.py" ]; then
@@ -45,7 +45,7 @@ jobs:
             SETUP_VERSION=$(grep -E "version=['\"][^'\"]+['\"]" setup.py | sed -E "s/.*version=['\"]([^'\"]+)['\"].*/\1/")
             echo "setup.py version: $SETUP_VERSION"
             if [ "$SETUP_VERSION" != "$TAG_VERSION" ]; then
-              echo "❌ Error: setup.py version ($SETUP_VERSION) doesn't match tag version ($TAG_VERSION)"
+              echo "Error: setup.py version ($SETUP_VERSION) doesn't match tag version ($TAG_VERSION)"
               exit 1
             fi
           else
@@ -55,7 +55,7 @@ jobs:
           fi
           
           echo "version=$TAG_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Version validation passed"
+          echo "Version validation passed"
 
       # Multi-architecture setup for F4 requirement
       - name: Set up QEMU
@@ -101,7 +101,7 @@ jobs:
       # Create summary for easy reference in GitHub Actions
       - name: Create release summary
         run: |
-          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
