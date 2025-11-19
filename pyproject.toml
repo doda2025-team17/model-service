@@ -1,6 +1,6 @@
 [project]
 name = "model-service"
-version = "0.0.1"  # This is our single source of truth
+version = "0.0.1"
 
 [build-system]
 requires = ["setuptools", "wheel"]
