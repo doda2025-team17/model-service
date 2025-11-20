@@ -1,10 +1,11 @@
 name: Release Model-Service Container Image
 
-# Trigger workflow on version tags
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - 'main'
+    paths:
+      - 'pyproject.toml'  # Only trigger if pyproject.toml changes
 
 # Environment variables for container registry
 env:
@@ -15,32 +16,39 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # 'write' to allow pushing tags
       packages: write
       
     steps:
-      # Get the source code
+      # Get the source code with full history for tagging
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Get full history for proper tagging
 
       # Single source of truth: version from pyproject.toml
-      - name: Extract and validate version
+      - name: Extract version and create tag
         id: version
         run: |
-          # Get version from tag (remove 'v' prefix)
-          TAG_VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Tag version: $TAG_VERSION"
-          
-          # Extract version from pyproject.toml
+          # Extract version from pyproject.toml (single source of truth)
           PYPROJECT_VERSION=$(grep -E '^version =' pyproject.toml | sed -E 's/version = "([^"]+)"/\1/' | tr -d ' "')
           echo "pyproject.toml version: $PYPROJECT_VERSION"
-          if [ "$PYPROJECT_VERSION" != "$TAG_VERSION" ]; then
-            echo "Error: pyproject.toml version ($PYPROJECT_VERSION) doesn't match tag version ($TAG_VERSION)"
+          
+          # Validate version format
+          if ! echo "$PYPROJECT_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
+            echo "Error: Invalid version format in pyproject.toml: $PYPROJECT_VERSION"
             exit 1
           fi
           
-          echo "version=$TAG_VERSION" >> $GITHUB_OUTPUT
-          echo "Version validation passed"
+          # Create Git tag
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "v$PYPROJECT_VERSION" -m "Release version $PYPROJECT_VERSION"
+          git push origin "v$PYPROJECT_VERSION"
+          
+          echo "version=$PYPROJECT_VERSION" >> $GITHUB_OUTPUT
+          echo "Version $PYPROJECT_VERSION tagged successfully"
 
       # Multi-architecture setup
       - name: Set up QEMU
@@ -62,7 +70,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64  # F4: Multi-architecture support
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
@@ -86,9 +94,10 @@ jobs:
       # Create summary for easy reference in GitHub Actions
       - name: Create release summary
         run: |
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Automated Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Git Tag:** \`v${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms:** amd64, arm64" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
