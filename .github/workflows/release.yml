@@ -1,6 +1,6 @@
 name: Release Model-Service Container Image
 
-# Trigger workflow on version tags (F8 requirement)
+# Trigger workflow on version tags
 on:
   push:
     tags:
@@ -31,33 +31,18 @@ jobs:
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           echo "Tag version: $TAG_VERSION"
           
-          # Try to find and validate version from Python project files
-          if [ -f "pyproject.toml" ]; then
-            # Extract version from pyproject.toml
-            PYPROJECT_VERSION=$(grep -E '^version =' pyproject.toml | sed -E 's/version = "([^"]+)"/\1/' | tr -d ' "')
-            echo "pyproject.toml version: $PYPROJECT_VERSION"
-            if [ "$PYPROJECT_VERSION" != "$TAG_VERSION" ]; then
-              echo "Error: pyproject.toml version ($PYPROJECT_VERSION) doesn't match tag version ($TAG_VERSION)"
-              exit 1
-            fi
-          elif [ -f "setup.py" ]; then
-            # Extract version from setup.py (simplified approach)
-            SETUP_VERSION=$(grep -E "version=['\"][^'\"]+['\"]" setup.py | sed -E "s/.*version=['\"]([^'\"]+)['\"].*/\1/")
-            echo "setup.py version: $SETUP_VERSION"
-            if [ "$SETUP_VERSION" != "$TAG_VERSION" ]; then
-              echo "Error: setup.py version ($SETUP_VERSION) doesn't match tag version ($TAG_VERSION)"
-              exit 1
-            fi
-          else
-            # Create a version file if none exists (single source of truth)
-            echo "No version file found. Creating version.txt with tag version"
-            echo "$TAG_VERSION" > version.txt
+          # Extract version from pyproject.toml
+          PYPROJECT_VERSION=$(grep -E '^version =' pyproject.toml | sed -E 's/version = "([^"]+)"/\1/' | tr -d ' "')
+          echo "pyproject.toml version: $PYPROJECT_VERSION"
+          if [ "$PYPROJECT_VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: pyproject.toml version ($PYPROJECT_VERSION) doesn't match tag version ($TAG_VERSION)"
+            exit 1
           fi
           
           echo "version=$TAG_VERSION" >> $GITHUB_OUTPUT
           echo "Version validation passed"
 
-      # Multi-architecture setup for F4 requirement
+      # Multi-architecture setup
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
