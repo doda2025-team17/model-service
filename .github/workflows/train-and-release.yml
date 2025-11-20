@@ -1,0 +1,42 @@
+name: Train and Release Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: "Version/tag for the model release (e.g., v1.0.0)"
+        required: true
+      release_notes:
+        description: "Optional release notes"
+        required: false
+        default: ""
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Train and package model
+        run: scripts/train_and_package.sh "${{ github.event.inputs.model_version }}"
+
+      - name: Create release and upload artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.model_version }}
+          name: Model ${{ github.event.inputs.model_version }}
+          body: ${{ github.event.inputs.release_notes }}
+          files: |
+            dist/*

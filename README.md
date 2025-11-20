@@ -38,6 +38,13 @@ Once all dependencies have been installed, the data can be preprocessed and the 
 
 The resulting model files will be placed as `.joblib` files in the `output/` folder.
 
+### Automated Training & Release
+
+This repository includes a GitHub Actions workflow named **Train and Release Model** that retrains the classifier on demand and publishes the resulting artifacts as public assets on a GitHub release.
+
+- Trigger it via **Actions → Train and Release Model → Run workflow**, provide a `model_version` (e.g., `v1.0.0`) plus optional release notes, and the workflow will install dependencies, execute `scripts/train_and_package.sh` and upload everything from `dist/` to a release tagged with that version.
+- You can also run `scripts/train_and_package.sh <model_version>` locally (or set `MODEL_VERSION=<version>`) to regenerate the artifacts and preview what will be uploaded.
+- Once the workflow completes, download the modl, preprocessor and supporting files from the release page that matches the provided version tag.
 
 ### Serving Recommendations
 
@@ -59,6 +66,5 @@ Once its startup has finished, you can either access [localhost:8081/apidocs](ht
       "result": "ham",
       "sms": "test ..."
     }
-
 
 
