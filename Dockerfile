@@ -15,11 +15,11 @@ RUN chmod +x docker-entrypoint.sh
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV SERVER_PORT=8081
+ENV MODEL_SERVICE_PORT=8081
 ENV MODEL_DIR="/models"
 
 # Expose port
-EXPOSE ${SERVER_PORT}
+EXPOSE ${MODEL_SERVICE_PORT}
 
 # Run the model service with bootstrap logic for model fetching
 ENTRYPOINT ["/app/docker-entrypoint.sh", "python", "src/serve_model.py"]
