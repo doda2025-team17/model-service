@@ -42,9 +42,20 @@ The resulting model files will be placed as `.joblib` files in the `output/` fol
 
 This repository includes a GitHub Actions workflow named **Train and Release Model** that retrains the classifier on demand and publishes the resulting artifacts as public assets on a GitHub release.
 
-- Trigger it via **Actions → Train and Release Model → Run workflow**, provide a `model_version` (e.g., `v1.0.0`) plus optional release notes, and the workflow will install dependencies, execute `scripts/train_and_package.sh` and upload everything from `dist/` to a release tagged with that version.
+- Trigger it via **Actions → Train and Release Model → Run workflow**, provide a `model_version` (e.g., `v1.0.0`) plus optional release notes, and the workflow will install dependencies, execute `scripts/train_and_package.sh`, and upload everything from `dist/` to a release tagged with that version.
 - You can also run `scripts/train_and_package.sh <model_version>` locally (or set `MODEL_VERSION=<version>`) to regenerate the artifacts and preview what will be uploaded.
-- Once the workflow completes, download the modl, preprocessor and supporting files from the release page that matches the provided version tag.
+- Once the workflow completes, download the model, preprocessor, and supporting files from the release page that matches the provided version tag.
+
+### Model artifacts and runtime location
+
+- At runtime the service loads `model.joblib` (classifier) and `preprocessor.joblib` (vectorizer pipeline) from `${MODEL_DIR:-/models}`. Both files must exist for the service to start.
+- Mount a volume to `/models` (or set `MODEL_DIR`) containing those two files. Optional extras (e.g., `misclassified_msgs.txt`, `accuracy_scores.png`) are not required to serve predictions.
+- Environment knobs:
+  - `MODEL_DIR` (default `/models`): where the service looks for model artifacts.
+  - `MODEL_FILES` (default `model.joblib,preprocessor.joblib`): comma-separated list of required files that must exist in `MODEL_DIR`.
+  - `MODEL_URL` (optional): public URL to a bundle (e.g., .zip/.tar.gz) containing the required files.
+- Startup behavior: on each boot, the service checks for all files in `MODEL_FILES` under `MODEL_DIR`. If any are missing and `MODEL_URL` is set, it downloads the bundle once, extracts it into `MODEL_DIR`, and proceeds. If files are still missing (or `MODEL_URL` is unset), the service will fail fast with a clear error.
+- Container defaults: the image sets `MODEL_DIR=/models` and uses a simple entrypoint that prepares the directory and starts the app; mount your model artifacts to `/models` or supply `MODEL_URL` to fetch them on first boot.
 
 ### Serving Recommendations
 
@@ -66,5 +77,3 @@ Once its startup has finished, you can either access [localhost:8081/apidocs](ht
       "result": "ham",
       "sms": "test ..."
     }
-
-

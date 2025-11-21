@@ -9,23 +9,17 @@ RUN pip install -r requirements.txt
 
 # Copy source code and smsspamcollection
 COPY src/ ./src/
-COPY smsspamcollection/ ./smsspamcollection/
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
-# Create output directory
-RUN mkdir -p output
-
-# Train the model during build
-RUN python src/read_data.py && \
-    python src/text_preprocessing.py && \
-    python src/text_classification.py
+RUN chmod +x docker-entrypoint.sh
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV SERVER_PORT=8081
+ENV MODEL_DIR="/models"
 
 # Expose port
 EXPOSE ${SERVER_PORT}
 
-# Run the model service
-ENTRYPOINT ["python"]
-CMD ["src/serve_model.py"]
+# Run the model service with bootstrap logic for model fetching
+ENTRYPOINT ["/app/docker-entrypoint.sh", "python", "src/serve_model.py"]
