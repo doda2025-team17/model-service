@@ -54,3 +54,10 @@ for artifact in model preprocessor preprocessed_data; do
 done
 
 echo "Artifacts are available in ${DIST_DIR}"
+
+echo "Creating model artifact bundle..."
+pushd "${DIST_DIR}" > /dev/null
+tar -czvf model-artifacts.tar.gz ./*
+popd > /dev/null
+
+echo "Bundle created at ${DIST_DIR}/model-artifacts.tar.gz"
