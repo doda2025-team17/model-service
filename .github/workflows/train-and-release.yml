@@ -39,5 +39,4 @@ jobs:
           tag_name: ${{ github.event.inputs.model_version }}
           name: Model ${{ github.event.inputs.model_version }}
           body: ${{ github.event.inputs.release_notes }}
-          files: |
-            dist/*
+          files: dist/model-artifacts.tar.gz

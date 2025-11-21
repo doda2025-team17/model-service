@@ -36,12 +36,7 @@ for key in "${!FILES_TO_PACKAGE[@]}"; do
   filename="${FILES_TO_PACKAGE[$key]}"
   src="${OUTPUT_DIR}/${filename}"
   if [[ -f "${src}" ]]; then
-    base="${filename%.*}"
-    ext=""
-    if [[ "${filename}" == *.* ]]; then
-      ext=".${filename##*.}"
-    fi
-    cp "${src}" "${DIST_DIR}/${base}-${VERSION}${ext}"
+    cp "${src}" "${DIST_DIR}/${filename}"
   fi
 done
 
@@ -54,3 +49,10 @@ for artifact in model preprocessor preprocessed_data; do
 done
 
 echo "Artifacts are available in ${DIST_DIR}"
+
+echo "Creating model artifact bundle..."
+pushd "${DIST_DIR}" > /dev/null
+tar -czvf model-artifacts.tar.gz ./*
+popd > /dev/null
+
+echo "Bundle created at ${DIST_DIR}/model-artifacts.tar.gz"
