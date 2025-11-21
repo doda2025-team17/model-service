@@ -36,12 +36,7 @@ for key in "${!FILES_TO_PACKAGE[@]}"; do
   filename="${FILES_TO_PACKAGE[$key]}"
   src="${OUTPUT_DIR}/${filename}"
   if [[ -f "${src}" ]]; then
-    base="${filename%.*}"
-    ext=""
-    if [[ "${filename}" == *.* ]]; then
-      ext=".${filename##*.}"
-    fi
-    cp "${src}" "${DIST_DIR}/${base}-${VERSION}${ext}"
+    cp "${src}" "${DIST_DIR}/${filename}"
   fi
 done
 
