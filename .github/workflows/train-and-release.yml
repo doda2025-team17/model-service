@@ -10,7 +10,7 @@ on:
       release_notes:
         description: "Optional release notes"
         required: false
-        default: ""
+        default: "New model release"
 
 jobs:
   build-and-release:
@@ -33,10 +33,40 @@ jobs:
       - name: Train and package model
         run: scripts/train_and_package.sh "${{ github.event.inputs.model_version }}"
 
-      - name: Create release and upload artifacts
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.model_version }}
-          name: Model ${{ github.event.inputs.model_version }}
-          body: ${{ github.event.inputs.release_notes }}
-          files: dist/model-artifacts.tar.gz
+      - name: Create Git tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          TAG="${{ github.event.inputs.model_version }}"
+
+          # Check if tag exists
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG$"; then
+            echo "Tag $TAG already exists"
+            exit 1
+          fi
+
+          git tag -a "$TAG" -m "Model release $TAG"
+          git push origin "$TAG"
+          echo "Created tag $TAG"
+
+      - name: Create GitHub release using API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.model_version }}"
+          NOTES="${{ github.event.inputs.release_notes }}"
+
+          # Create release using GitHub CLI
+          gh release create "$TAG" \
+            --title "Model $TAG" \
+            --notes "$NOTES" \
+            dist/model-artifacts.tar.gz
+
+      - name: Make release public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # GitHub releases are public by default if repo is public
+          echo "Release created and artifact uploaded"
+          echo "Download URL: https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.model_version }}/model-artifacts.tar.gz"
