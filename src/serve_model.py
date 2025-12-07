@@ -8,9 +8,10 @@ import tempfile
 import zipfile
 import joblib
 import urllib.request
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from flasgger import Swagger
 import pandas as pd
+from prometheus_client import Counter, Gauge, Histogram, CONTENT_TYPE_LATEST, generate_latest
 
 from text_preprocessing import prepare, _extract_message_len, _text_process
 
@@ -21,6 +22,22 @@ MODEL_DIR = os.getenv('MODEL_DIR', '/models')
 MODEL_URL = os.getenv('MODEL_URL', '')
 # Comma-separated list of required model artifacts; defaults cover serving needs.
 MODEL_FILES = [f.strip() for f in os.getenv('MODEL_FILES', 'model.joblib,preprocessor.joblib').split(',') if f.strip()]
+
+PREDICTIONS = Counter(
+    'sms_model_predictions_total',
+    'Total SMS predictions served by the model',
+    ['result', 'source']
+)
+INFLIGHT = Gauge(
+    'sms_model_inflight_requests',
+    'Concurrent prediction requests being processed',
+    ['endpoint']
+)
+INFERENCE_LATENCY = Histogram(
+    'sms_model_inference_seconds',
+    'Latency of model inference in seconds',
+    ['model']
+)
 
 def _model_path(filename: str) -> str:
     return os.path.join(MODEL_DIR, filename)
@@ -112,15 +129,27 @@ def predict():
     sms = input_data.get('sms')
     processed_sms = prepare(sms)
     model = _load_model()
-    prediction = model.predict(processed_sms)[0]
-    
-    res = {
-        "result": prediction,
-        "classifier": "decision tree",
-        "sms": sms
-    }
-    print(res)
-    return jsonify(res)
+    inflight = INFLIGHT.labels(endpoint="/predict")
+    inflight.inc()
+    try:
+        with INFERENCE_LATENCY.labels(model="decision_tree").time():
+            prediction = model.predict(processed_sms)[0]
+        source = request.headers.get('X-Client', 'app')
+        PREDICTIONS.labels(result=prediction, source=source).inc()
+        res = {
+            "result": prediction,
+            "classifier": "decision tree",
+            "sms": sms
+        }
+        print(res)
+        return jsonify(res)
+    finally:
+        inflight.dec()
+
+
+@app.route('/metrics')
+def metrics():
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
 if __name__ == '__main__':
     #clf = joblib.load('output/model.joblib')
