@@ -145,7 +145,9 @@ def predict():
             "sms": sms
         }
         print(res)
-        return jsonify(res)
+        resp = jsonify(res)
+        resp.headers["X-Model-Version"] = DASHBOARD_VERSION   # v1 / v2 (comes from env)
+        return resp
     finally:
         inflight.dec()
 
