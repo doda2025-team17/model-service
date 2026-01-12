@@ -25,6 +25,8 @@ MODEL_FILES = [f.strip() for f in os.getenv('MODEL_FILES', 'model.joblib,preproc
 
 # Stable or Experimental dashboard version
 DASHBOARD_VERSION = os.getenv('DASHBOARD_VERSION', 'v1')
+# Flag to tag shadow instances/traffic in metrics
+SHADOW_MODE = os.getenv('SHADOW_MODE', 'false').lower() == 'true'
 
 PREDICTIONS = Counter(
     'sms_model_predictions_total',
@@ -137,7 +139,8 @@ def predict():
     try:
         with INFERENCE_LATENCY.labels(model="decision_tree", version=DASHBOARD_VERSION).time():
             prediction = model.predict(processed_sms)[0]
-        source = request.headers.get('X-Client', 'app')
+        incoming_shadow = request.headers.get('x-shadow', '').lower() == 'true'
+        source = "shadow" if SHADOW_MODE or incoming_shadow else request.headers.get('X-Client', 'app')
         PREDICTIONS.labels(result=prediction, source=source, version=DASHBOARD_VERSION).inc()
         res = {
             "result": prediction,
