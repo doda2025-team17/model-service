@@ -36,12 +36,12 @@ PREDICTIONS = Counter(
 INFLIGHT = Gauge(
     'sms_model_inflight_requests',
     'Concurrent prediction requests being processed',
-    ['endpoint', 'version']
+    ['endpoint', 'source', 'version']
 )
 INFERENCE_LATENCY = Histogram(
     'sms_model_inference_seconds',
     'Latency of model inference in seconds',
-    ['model', 'version']
+    ['model', 'source', 'version']
 )
 
 def _model_path(filename: str) -> str:
@@ -134,13 +134,13 @@ def predict():
     sms = input_data.get('sms')
     processed_sms = prepare(sms)
     model = _load_model()
-    inflight = INFLIGHT.labels(endpoint="/predict", version=DASHBOARD_VERSION)
+    incoming_shadow = request.headers.get('x-shadow', '').lower() == 'true'
+    source = "shadow" if SHADOW_MODE or incoming_shadow else request.headers.get('X-Client', 'app')
+    inflight = INFLIGHT.labels(endpoint="/predict", source=source, version=DASHBOARD_VERSION)
     inflight.inc()
     try:
-        with INFERENCE_LATENCY.labels(model="decision_tree", version=DASHBOARD_VERSION).time():
+        with INFERENCE_LATENCY.labels(model="decision_tree", source=source, version=DASHBOARD_VERSION).time():
             prediction = model.predict(processed_sms)[0]
-        incoming_shadow = request.headers.get('x-shadow', '').lower() == 'true'
-        source = "shadow" if SHADOW_MODE or incoming_shadow else request.headers.get('X-Client', 'app')
         PREDICTIONS.labels(result=prediction, source=source, version=DASHBOARD_VERSION).inc()
         res = {
             "result": prediction,
